@@ -20,11 +20,15 @@ var (
 	getentCmd string
 )
 
-func mkdirAs(path string, mode os.FileMode, ownerUID, ownerGID int, mkAll, chownExisting bool) error {
+func mkdirAs(path string, mode os.FileMode, identity Identity, mkAll, chownExisting bool) error {
 	// make an array containing the original path asked for, plus (for mkAll == true)
 	// all path components leading up to the complete path that don't exist before we MkdirAll
 	// so that we can chown all of them properly at the end.  If chownExisting is false, we won't
 	// chown the full directory path if it exists
+
+	ownerUID := identity.IdPair.UID
+	ownerGID := identity.IdPair.GID
+
 	var paths []string
 	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
 		paths = []string{path}

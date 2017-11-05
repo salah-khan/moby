@@ -95,7 +95,13 @@ func InitFilter(home string, options []string, uidMaps, gidMaps []idtools.IDMap)
 		return nil, fmt.Errorf("%s is on an ReFS volume - ReFS volumes are not supported", home)
 	}
 
-	if err := idtools.MkdirAllAs(home, 0700, 0, 0); err != nil {
+	var identity idtools.Identity
+
+	identity.IdType = idtools.TypeIDPair
+	identity.IdPair.UID = 0
+	identity.IdPair.GID = 0
+
+	if err := idtools.MkdirAllAs(home, 0700, identity); err != nil {
 		return nil, fmt.Errorf("windowsfilter failed to create '%s': %v", home, err)
 	}
 

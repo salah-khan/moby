@@ -30,7 +30,7 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		idMappings: idtools.NewIDMappingsFromMaps(uidMaps, gidMaps),
 	}
 	rootIDs := d.idMappings.RootPair()
-	if err := idtools.MkdirAllAndChown(home, 0700, rootIDs); err != nil {
+	if err := idtools.MkdirAllAndChown(home, 0700, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil {
 		return nil, err
 	}
 	return graphdriver.NewNaiveDiffDriver(d, uidMaps, gidMaps), nil
@@ -78,10 +78,10 @@ func (d *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) error {
 
 	dir := d.dir(id)
 	rootIDs := d.idMappings.RootPair()
-	if err := idtools.MkdirAllAndChown(filepath.Dir(dir), 0700, rootIDs); err != nil {
+	if err := idtools.MkdirAllAndChown(filepath.Dir(dir), 0700, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil {
 		return err
 	}
-	if err := idtools.MkdirAndChown(dir, 0755, rootIDs); err != nil {
+	if err := idtools.MkdirAndChown(dir, 0755, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil {
 		return err
 	}
 	labelOpts := []string{"level:s0"}

@@ -101,7 +101,7 @@ type Daemon struct {
 	seccompEnabled        bool
 	apparmorEnabled       bool
 	shutdown              bool
-	idMappings            *idtools.IDMappings
+	idMapping             *idtools.IdentityMapping
 	stores                map[string]daemonStore // By container target platform
 	referenceStore        refstore.Store
 	PluginStore           *plugin.Store // todo: remove
@@ -541,13 +541,13 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	if err != nil {
 		return nil, err
 	}
-	rootIDs := idMappings.RootPair()
+	rootIDs := idMappings.IdMappings.RootPair()
 	if err := setupDaemonProcess(config); err != nil {
 		return nil, err
 	}
 
 	// set up the tmpDir to use a canonical path
-	tmp, err := prepareTempDir(config.Root, rootIDs)
+	tmp, err := prepareTempDir(config.Root, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs})
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get the TempDir under %s: %s", config.Root, err)
 	}
@@ -602,7 +602,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	daemonRepo := filepath.Join(config.Root, "containers")
-	if err := idtools.MkdirAllAndChown(daemonRepo, 0700, rootIDs); err != nil && !os.IsExist(err) {
+	if err := idtools.MkdirAllAndChown(daemonRepo, 0700, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
 
@@ -670,7 +670,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 			MetadataStorePathTemplate: filepath.Join(config.Root, "image", "%s", "layerdb"),
 			GraphDriver:               ds.graphDriver,
 			GraphDriverOptions:        config.GraphOptions,
-			IDMappings:                idMappings,
+			IdMapping:                 idMappings,
 			PluginGetter:              d.PluginStore,
 			ExperimentalEnabled:       config.Experimental,
 			OS:                        operatingSystem,
@@ -715,7 +715,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	// Configure the volumes driver
-	volStore, err := d.configureVolumes(rootIDs)
+	volStore, err := d.configureVolumes(idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs})
 	if err != nil {
 		return nil, err
 	}
@@ -799,7 +799,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.EventsService = eventsService
 	d.volumes = volStore
 	d.root = config.Root
-	d.idMappings = idMappings
+	d.idMapping = idMappings
 	d.seccompEnabled = sysInfo.Seccomp
 	d.apparmorEnabled = sysInfo.AppArmor
 
@@ -1030,7 +1030,7 @@ func (daemon *Daemon) GraphDriverName(platform string) string {
 // prepareTempDir prepares and returns the default directory to use
 // for temporary files.
 // If it doesn't exist, it is created. If it exists, its content is removed.
-func prepareTempDir(rootDir string, rootIDs idtools.IDPair) (string, error) {
+func prepareTempDir(rootDir string, rootIdentity idtools.Identity) (string, error) {
 	var tmpDir string
 	if tmpDir = os.Getenv("DOCKER_TMPDIR"); tmpDir == "" {
 		tmpDir = filepath.Join(rootDir, "tmp")
@@ -1050,12 +1050,12 @@ func prepareTempDir(rootDir string, rootIDs idtools.IDPair) (string, error) {
 	}
 	// We don't remove the content of tmpdir if it's not the default,
 	// it may hold things that do not belong to us.
-	return tmpDir, idtools.MkdirAllAndChown(tmpDir, 0700, rootIDs)
+	return tmpDir, idtools.MkdirAllAndChown(tmpDir, 0700, rootIdentity)
 }
 
 func (daemon *Daemon) setupInitLayer(initPath containerfs.ContainerFS) error {
-	rootIDs := daemon.idMappings.RootPair()
-	return initlayer.Setup(initPath, rootIDs)
+	rootIDs := daemon.idMapping.IdMappings.RootPair()
+	return initlayer.Setup(initPath, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs})
 }
 
 func (daemon *Daemon) setGenericResources(conf *config.Config) error {
@@ -1077,7 +1077,7 @@ func setDefaultMtu(conf *config.Config) {
 	conf.Mtu = config.DefaultNetworkMtu
 }
 
-func (daemon *Daemon) configureVolumes(rootIDs idtools.IDPair) (*store.VolumeStore, error) {
+func (daemon *Daemon) configureVolumes(rootIDs idtools.Identity) (*store.VolumeStore, error) {
 	volumesDriver, err := local.New(daemon.configStore.Root, rootIDs)
 	if err != nil {
 		return nil, err
@@ -1230,7 +1230,7 @@ func CreateDaemonRoot(config *config.Config) error {
 	if err != nil {
 		return err
 	}
-	return setupDaemonRoot(config, realRoot, idMappings.RootPair())
+	return setupDaemonRoot(config, realRoot, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idMappings.IdMappings.RootPair()})
 }
 
 // checkpointAndSave grabs a container lock to safely call container.CheckpointTo
