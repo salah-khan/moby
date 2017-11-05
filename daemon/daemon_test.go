@@ -122,7 +122,7 @@ func initDaemonWithVolumeStore(tmp string) (*Daemon, error) {
 		return nil, err
 	}
 
-	volumesDriver, err := local.New(tmp, idtools.IDPair{UID: 0, GID: 0})
+	volumesDriver, err := local.New(tmp, idtools.Identity{TypeIDPair, IDPair{UID: 0, GID: 0}})
 	if err != nil {
 		return nil, err
 	}

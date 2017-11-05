@@ -191,14 +191,18 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 		return err
 	}
 
-	chownPair := b.idMappings.RootPair()
+	identity := idtools.Identity{IdType: idtools.TypeIDPair, IdPair: b.idMappings.RootPair()}
 	// if a chown was requested, perform the steps to get the uid, gid
 	// translated (if necessary because of user namespaces), and replace
 	// the root pair with the chown pair for copy operations
 	if inst.chownStr != "" {
-		chownPair, err = parseChownFlag(inst.chownStr, destInfo.root.Path(), b.idMappings)
+		identity, err = parseChownFlag(b.Stdout, b.options.Platform, inst.chownStr, destInfo.root.Path(), b.idMappings)
 		if err != nil {
-			return errors.Wrapf(err, "unable to convert uid/gid chown string to host mapping")
+			if b.options.Platform != "windows" {
+				return errors.Wrapf(err, "unable to convert uid/gid chown string to host mapping")
+			} else {
+				return errors.Wrapf(err, "unable to map user account name to host SID")
+			}
 		}
 	}
 
@@ -206,7 +210,7 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 		opts := copyFileOptions{
 			decompress: inst.allowLocalDecompression,
 			archiver:   b.getArchiver(info.root, destInfo.root),
-			chownPair:  chownPair,
+			identity:  identity,
 		}
 		if err := performCopyForInfo(destInfo, info, opts); err != nil {
 			return errors.Wrapf(err, "failed to copy files")
@@ -215,42 +219,54 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 	return b.exportImage(state, imageMount, runConfigWithCommentCmd)
 }
 
-func parseChownFlag(chown, ctrRootPath string, idMappings *idtools.IDMappings) (idtools.IDPair, error) {
-	var userStr, grpStr string
-	parts := strings.Split(chown, ":")
-	if len(parts) > 2 {
-		return idtools.IDPair{}, errors.New("invalid chown string format: " + chown)
-	}
-	if len(parts) == 1 {
-		// if no group specified, use the user spec as group as well
-		userStr, grpStr = parts[0], parts[0]
+func parseChownFlag(StdOut io.Writer, platform string, chown, ctrRootPath string, idMappings *idtools.IDMappings) (idtools.Identity, error) {
+
+	if platform == "windows" {
+		return getAccountIdentity(chown, ctrRootPath)
+
 	} else {
-		userStr, grpStr = parts[0], parts[1]
+
+		var userStr, grpStr string
+		parts := strings.Split(chown, ":")
+		if len(parts) > 2 {
+			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.New("invalid chown string format: " + chown)
+		}
+		if len(parts) == 1 {
+			// if no group specified, use the user spec as group as well
+			userStr, grpStr = parts[0], parts[0]
+		} else {
+			userStr, grpStr = parts[0], parts[1]
+		}
+
+		passwdPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "passwd"), ctrRootPath)
+		if err != nil {
+			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't resolve /etc/passwd path in container rootfs")
+		}
+		groupPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "group"), ctrRootPath)
+		if err != nil {
+			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't resolve /etc/group path in container rootfs")
+		}
+		uid, err := lookupUser(userStr, passwdPath)
+		if err != nil {
+			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't find uid for user "+userStr)
+		}
+		gid, err := lookupGroup(grpStr, groupPath)
+		if err != nil {
+			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't find gid for group "+grpStr)
+		}
+
+		// convert as necessary because of user namespaces
+		idPair, err := idMappings.ToHost(idtools.IDPair{UID: uid, GID: gid})
+		if err != nil {
+			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "unable to convert uid/gid to host mapping")
+		}
+
+		identity := idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idPair}
+
+		return identity, nil
 	}
 
-	passwdPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "passwd"), ctrRootPath)
-	if err != nil {
-		return idtools.IDPair{}, errors.Wrapf(err, "can't resolve /etc/passwd path in container rootfs")
-	}
-	groupPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "group"), ctrRootPath)
-	if err != nil {
-		return idtools.IDPair{}, errors.Wrapf(err, "can't resolve /etc/group path in container rootfs")
-	}
-	uid, err := lookupUser(userStr, passwdPath)
-	if err != nil {
-		return idtools.IDPair{}, errors.Wrapf(err, "can't find uid for user "+userStr)
-	}
-	gid, err := lookupGroup(grpStr, groupPath)
-	if err != nil {
-		return idtools.IDPair{}, errors.Wrapf(err, "can't find gid for group "+grpStr)
-	}
-
-	// convert as necessary because of user namespaces
-	chownPair, err := idMappings.ToHost(idtools.IDPair{UID: uid, GID: gid})
-	if err != nil {
-		return idtools.IDPair{}, errors.Wrapf(err, "unable to convert uid/gid to host mapping")
-	}
-	return chownPair, nil
+	return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, nil
 }
 
 func lookupUser(userStr, filepath string) (int, error) {

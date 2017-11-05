@@ -121,6 +121,19 @@ type IDPair struct {
 	GID int
 }
 
+type IdentityType int
+
+const (
+    TypeIDPair IdentityType = iota
+    TypeIDSID
+)
+
+type Identity struct {
+	IdType IdentityType
+	IdPair IDPair
+	IdSid string
+}
+
 // IDMappings contains a mappings of UIDs and GIDs
 type IDMappings struct {
 	uids []IDMap

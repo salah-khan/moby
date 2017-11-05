@@ -46,10 +46,10 @@ type activeMount struct {
 // New instantiates a new Root instance with the provided scope. Scope
 // is the base path that the Root instance uses to store its
 // volumes. The base path is created here if it does not exist.
-func New(scope string, rootIDs idtools.IDPair) (*Root, error) {
+func New(scope string, rootIdentity idtools.Identity) (*Root, error) {
 	rootDirectory := filepath.Join(scope, volumesPathName)
 
-	if err := idtools.MkdirAllAndChown(rootDirectory, 0700, rootIDs); err != nil {
+	if err := idtools.MkdirAllAndChown(rootDirectory, 0700, rootIdentity.IdPair); err != nil {
 		return nil, err
 	}
 
@@ -57,7 +57,7 @@ func New(scope string, rootIDs idtools.IDPair) (*Root, error) {
 		scope:   scope,
 		path:    rootDirectory,
 		volumes: make(map[string]*localVolume),
-		rootIDs: rootIDs,
+		rootIdentity: rootIdentity,
 	}
 
 	dirs, err := ioutil.ReadDir(rootDirectory)
@@ -115,7 +115,7 @@ type Root struct {
 	scope   string
 	path    string
 	volumes map[string]*localVolume
-	rootIDs idtools.IDPair
+	rootIdentity idtools.Identity
 }
 
 // List lists all the volumes
@@ -180,7 +180,7 @@ func (r *Root) Create(name string, opts map[string]string) (volume.Volume, error
 	}
 
 	path := r.DataPath(name)
-	if err := idtools.MkdirAllAndChown(path, 0755, r.rootIDs); err != nil {
+	if err := idtools.MkdirAllAndChown(path, 0755, r.rootIdentity.IdPair); err != nil {
 		if os.IsExist(err) {
 			return nil, alreadyExistsError{filepath.Dir(path)}
 		}

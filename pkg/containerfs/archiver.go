@@ -11,8 +11,8 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/system"
 	"github.com/sirupsen/logrus"
-)
 
+)
 // TarFunc provides a function definition for a custom Tar function
 type TarFunc func(string, *archive.TarOptions) (io.ReadCloser, error)
 

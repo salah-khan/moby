@@ -175,55 +175,55 @@ othergrp:x:6666:
 		name      string
 		chownStr  string
 		idMapping *idtools.IDMappings
-		expected  idtools.IDPair
+		expected  idtools.Identity.IDPair
 	}{
 		{
 			name:      "UIDNoMap",
 			chownStr:  "1",
 			idMapping: unmapped,
-			expected:  idtools.IDPair{UID: 1, GID: 1},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 1, GID: 1}},
 		},
 		{
 			name:      "UIDGIDNoMap",
 			chownStr:  "0:1",
 			idMapping: unmapped,
-			expected:  idtools.IDPair{UID: 0, GID: 1},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 0, GID: 1}},
 		},
 		{
 			name:      "UIDWithMap",
 			chownStr:  "0",
 			idMapping: remapped,
-			expected:  idtools.IDPair{UID: 100000, GID: 100000},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 100000, GID: 100000}},
 		},
 		{
 			name:      "UIDGIDWithMap",
 			chownStr:  "1:33",
 			idMapping: remapped,
-			expected:  idtools.IDPair{UID: 100001, GID: 100033},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 100001, GID: 100033}},
 		},
 		{
 			name:      "UserNoMap",
 			chownStr:  "bin:5555",
 			idMapping: unmapped,
-			expected:  idtools.IDPair{UID: 1, GID: 5555},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 1, GID: 5555}},
 		},
 		{
 			name:      "GroupWithMap",
 			chownStr:  "0:unicorn",
 			idMapping: remapped,
-			expected:  idtools.IDPair{UID: 100000, GID: 101002},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 100000, GID: 101002}},
 		},
 		{
 			name:      "UserOnlyWithMap",
 			chownStr:  "unicorn",
 			idMapping: remapped,
-			expected:  idtools.IDPair{UID: 101001, GID: 101002},
+			expected:  idtools.Identity{TypeIDPair, IDPair{UID: 101001, GID: 101002}},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			idPair, err := parseChownFlag(testcase.chownStr, contextDir, testcase.idMapping)
+			IdPair, err := parseChownFlag(testcase.chownStr, contextDir, testcase.idMapping)
 			require.NoError(t, err, "Failed to parse chown flag: %q", testcase.chownStr)
-			assert.Equal(t, testcase.expected, idPair, "chown flag mapping failure")
+			assert.Equal(t, testcase.expected, IdPair, "chown flag mapping failure")
 		})
 	}
 

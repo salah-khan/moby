@@ -38,7 +38,7 @@ type (
 		NoLchown         bool
 		UIDMaps          []idtools.IDMap
 		GIDMaps          []idtools.IDMap
-		ChownOpts        *idtools.IDPair
+		ChownOpts        *idtools.Identity
 		IncludeSourceDir bool
 		// WhiteoutFormat is the expected on disk format for whiteout files.
 		// This format will be converted to the standard format on pack
@@ -380,7 +380,7 @@ type tarAppender struct {
 	// for hardlink mapping
 	SeenFiles  map[uint64]string
 	IDMappings *idtools.IDMappings
-	ChownOpts  *idtools.IDPair
+	ChownOpts  *idtools.Identity
 
 	// For packing and unpacking whiteout files in the
 	// non standard format. The whiteout files defined
@@ -389,7 +389,7 @@ type tarAppender struct {
 	WhiteoutConverter tarWhiteoutConverter
 }
 
-func newTarAppender(idMapping *idtools.IDMappings, writer io.Writer, chownOpts *idtools.IDPair) *tarAppender {
+func newTarAppender(idMapping *idtools.IDMappings, writer io.Writer, chownOpts *idtools.Identity) *tarAppender {
 	return &tarAppender{
 		SeenFiles:  make(map[uint64]string),
 		TarWriter:  tar.NewWriter(writer),
@@ -464,7 +464,7 @@ func (ta *tarAppender) addTarFile(path, name string) error {
 		if err != nil {
 			return err
 		}
-		hdr.Uid, hdr.Gid, err = ta.IDMappings.ToContainer(fileIDPair)
+		hdr.Uid, hdr.Gid, err = ta.IDMappings.ToContainer(fileIDPair.IdPair)
 		if err != nil {
 			return err
 		}
@@ -472,8 +472,8 @@ func (ta *tarAppender) addTarFile(path, name string) error {
 
 	// explicitly override with ChownOpts
 	if ta.ChownOpts != nil {
-		hdr.Uid = ta.ChownOpts.UID
-		hdr.Gid = ta.ChownOpts.GID
+		hdr.Uid = ta.ChownOpts.IdPair.UID
+		hdr.Gid = ta.ChownOpts.IdPair.GID
 	}
 
 	if ta.WhiteoutConverter != nil {
@@ -527,7 +527,7 @@ func (ta *tarAppender) addTarFile(path, name string) error {
 	return nil
 }
 
-func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, Lchown bool, chownOpts *idtools.IDPair, inUserns bool) error {
+func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, Lchown bool, chownOpts *idtools.Identity, inUserns bool) error {
 	// hdr.Mode is in linux format, which we can use for sycalls,
 	// but for os.Foo() calls we need the mode converted to os.FileMode,
 	// so use hdrInfo.Mode() (they differ for e.g. setuid bits)
@@ -607,9 +607,9 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 	// Lchown is not supported on Windows.
 	if Lchown && runtime.GOOS != "windows" {
 		if chownOpts == nil {
-			chownOpts = &idtools.IDPair{UID: hdr.Uid, GID: hdr.Gid}
+			chownOpts = &idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{UID: hdr.Uid, GID: hdr.Gid}}
 		}
-		if err := os.Lchown(path, chownOpts.UID, chownOpts.GID); err != nil {
+		if err := os.Lchown(path, chownOpts.IdPair.UID, chownOpts.IdPair.GID); err != nil {
 			return err
 		}
 	}

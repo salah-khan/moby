@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/idtools"
+	"github.com/docker/docker/pkg/system"
+	"golang.org/x/sys/windows"
+	"github.com/Microsoft/go-winio"
 )
 
 var pathBlacklist = map[string]bool{
@@ -13,8 +16,30 @@ var pathBlacklist = map[string]bool{
 	"c:\\windows": true,
 }
 
-func fixPermissions(source, destination string, rootIDs idtools.IDPair, overrideSkip bool) error {
-	// chown is not supported on Windows
+func fixPermissions(source, destination string, identity idtools.Identity, overrideSkip bool) error {
+	
+	if identity.IdType == idtools.TypeIDSID {
+		var sid *windows.SID
+
+		privileges := []string{winio.SeRestorePrivilege}
+
+		err := winio.EnableProcessPrivileges(privileges)
+		if err != nil {
+			return err
+		}
+
+		defer winio.DisableProcessPrivileges(privileges)
+
+		sid, err = windows.StringToSid(identity.IdSid)
+		if err != nil {
+			return err
+		}
+
+		err = system.SetNamedSecurityInfo(windows.StringToUTF16Ptr(destination), system.SE_FILE_OBJECT, system.OWNER_SECURITY_INFORMATION, sid, nil, nil, nil)
+
+		return err
+	}
+
 	return nil
 }
 

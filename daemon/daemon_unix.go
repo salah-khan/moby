@@ -1117,7 +1117,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 	return &idtools.IDMappings{}, nil
 }
 
-func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPair) error {
+func setupDaemonRoot(config *config.Config, rootDir string, rootIdentity idtools.Identity) error {
 	config.Root = rootDir
 	// the docker root metadata directory needs to have execute permissions for all users (g+x,o+x)
 	// so that syscalls executing as non-root, operating on subdirectories of the graph root
@@ -1142,7 +1142,7 @@ func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPa
 	// a new subdirectory with ownership set to the remapped uid/gid (so as to allow
 	// `chdir()` to work for containers namespaced to that uid/gid)
 	if config.RemappedRoot != "" {
-		config.Root = filepath.Join(rootDir, fmt.Sprintf("%d.%d", rootIDs.UID, rootIDs.GID))
+		config.Root = filepath.Join(rootDir, fmt.Sprintf("%d.%d", rootIdentity.IDPair.UID, rootIdentity.IDPair.GID))
 		logrus.Debugf("Creating user namespaced daemon root: %s", config.Root)
 		// Create the root directory if it doesn't exist
 		if err := idtools.MkdirAllAndChown(config.Root, 0700, rootIDs); err != nil {
@@ -1158,7 +1158,7 @@ func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPa
 			if dirPath == "/" {
 				break
 			}
-			if !idtools.CanAccess(dirPath, rootIDs) {
+			if !idtools.CanAccess(dirPath, rootIdentity) {
 				return fmt.Errorf("a subdirectory in your graphroot path (%s) restricts access to the remapped root uid/gid; please fix by allowing 'o+x' permissions on existing directories", config.Root)
 			}
 		}

@@ -94,7 +94,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 	return nil, nil
 }
 
-func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPair) error {
+func setupDaemonRoot(config *config.Config, rootDir string, rootIdentity idtools.Identity) error {
 	return nil
 }
 
