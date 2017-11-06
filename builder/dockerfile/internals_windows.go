@@ -6,7 +6,6 @@ package dockerfile
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 	"unsafe"
 	"strconv"
 
@@ -22,8 +21,9 @@ import (
 
 func getAccountIdentity(accountName string, ctrRootPath string) (idtools.Identity, error) {
 
-	sid, domain, _, err := syscall.LookupSID("", accountName)
-	if err == nil && domain == "BUILTIN" {
+	sid, _, accType, err := windows.LookupSID("", accountName)
+
+	if err == nil && (accType == windows.SidTypeAlias || accType == windows.SidTypeWellKnownGroup) {
 		accountSid, err := sid.String()
 
 		if err != nil {
@@ -279,10 +279,6 @@ func lookupNTGroup(groupNamesKey windows.Handle, groupStr string, computerSid st
 	var subKeyCount uint32
 	var maxSubKeyLen uint32
 	var accountName string
-
-	if (groupStr == "None") {
-		return "", false, system.ERROR_NO_SUCH_GROUP
-	}
 
 	err := windows.RegQueryInfoKey(groupNamesKey, nil, nil, nil, &subKeyCount, &maxSubKeyLen, nil, nil, nil, nil, nil, nil)
 	if err != nil {
