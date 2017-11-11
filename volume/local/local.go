@@ -49,7 +49,7 @@ type activeMount struct {
 func New(scope string, rootIdentity idtools.Identity) (*Root, error) {
 	rootDirectory := filepath.Join(scope, volumesPathName)
 
-	if err := idtools.MkdirAllAndChown(rootDirectory, 0700, rootIdentity.IdPair); err != nil {
+	if err := idtools.MkdirAllAndChown(rootDirectory, 0700, rootIdentity); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +180,7 @@ func (r *Root) Create(name string, opts map[string]string) (volume.Volume, error
 	}
 
 	path := r.DataPath(name)
-	if err := idtools.MkdirAllAndChown(path, 0755, r.rootIdentity.IdPair); err != nil {
+	if err := idtools.MkdirAllAndChown(path, 0755, r.rootIdentity); err != nil {
 		if os.IsExist(err) {
 			return nil, alreadyExistsError{filepath.Dir(path)}
 		}

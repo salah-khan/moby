@@ -59,12 +59,12 @@ type (
 // mappings for untar, an Archiver can be created with maps which will then be passed to Untar operations.
 type Archiver struct {
 	Untar         func(io.Reader, string, *TarOptions) error
-	IDMappingsVar *idtools.IDMappings
+	IdMapping     *idtools.IdentityMapping
 }
 
 // NewDefaultArchiver returns a new Archiver without any IDMappings
 func NewDefaultArchiver() *Archiver {
-	return &Archiver{Untar: Untar, IDMappingsVar: &idtools.IDMappings{}}
+	return &Archiver{Untar: Untar, IdMapping: &idtools.IdentityMapping{MappingType: idtools.TypeMapping}}
 }
 
 // breakoutError is used to differentiate errors related to breaking out
@@ -891,7 +891,7 @@ loop:
 			parent := filepath.Dir(hdr.Name)
 			parentPath := filepath.Join(dest, parent)
 			if _, err := os.Lstat(parentPath); err != nil && os.IsNotExist(err) {
-				err = idtools.MkdirAllAndChownNew(parentPath, 0777, rootIDs)
+				err = idtools.MkdirAllAndChownNew(parentPath, 0777, idtools.Identity{IdType: idtools.TypeIDPair, IdPair:rootIDs})
 				if err != nil {
 					return err
 				}
@@ -1023,8 +1023,8 @@ func (archiver *Archiver) TarUntar(src, dst string) error {
 	}
 	defer archive.Close()
 	options := &TarOptions{
-		UIDMaps: archiver.IDMappingsVar.UIDs(),
-		GIDMaps: archiver.IDMappingsVar.GIDs(),
+		UIDMaps: archiver.IdMapping.IdMappings.UIDs(),
+		GIDMaps: archiver.IdMapping.IdMappings.GIDs(),
 	}
 	return archiver.Untar(archive, dst, options)
 }
@@ -1037,8 +1037,8 @@ func (archiver *Archiver) UntarPath(src, dst string) error {
 	}
 	defer archive.Close()
 	options := &TarOptions{
-		UIDMaps: archiver.IDMappingsVar.UIDs(),
-		GIDMaps: archiver.IDMappingsVar.GIDs(),
+		UIDMaps: archiver.IdMapping.IdMappings.UIDs(),
+		GIDMaps: archiver.IdMapping.IdMappings.GIDs(),
 	}
 	return archiver.Untar(archive, dst, options)
 }
@@ -1059,10 +1059,10 @@ func (archiver *Archiver) CopyWithTar(src, dst string) error {
 	// if this Archiver is set up with ID mapping we need to create
 	// the new destination directory with the remapped root UID/GID pair
 	// as owner
-	rootIDs := archiver.IDMappingsVar.RootPair()
+	rootIDs := archiver.IdMapping.IdMappings.RootPair()
 	// Create dst, copy src's content into it
 	logrus.Debugf("Creating dest directory: %s", dst)
-	if err := idtools.MkdirAllAndChownNew(dst, 0755, rootIDs); err != nil {
+	if err := idtools.MkdirAllAndChownNew(dst, 0755, idtools.Identity{IdType: idtools.TypeIDPair, IdPair:rootIDs}); err != nil {
 		return err
 	}
 	logrus.Debugf("Calling TarUntar(%s, %s)", src, dst)
@@ -1115,7 +1115,7 @@ func (archiver *Archiver) CopyFileWithTar(src, dst string) (err error) {
 			hdr.Name = filepath.Base(dst)
 			hdr.Mode = int64(chmodTarEntry(os.FileMode(hdr.Mode)))
 
-			if err := remapIDs(archiver.IDMappingsVar, hdr); err != nil {
+			if err := remapIDs(archiver.IdMapping.IdMappings, hdr); err != nil {
 				return err
 			}
 
@@ -1144,8 +1144,8 @@ func (archiver *Archiver) CopyFileWithTar(src, dst string) (err error) {
 }
 
 // IDMappings returns the IDMappings of the archiver.
-func (archiver *Archiver) IDMappings() *idtools.IDMappings {
-	return archiver.IDMappingsVar
+func (archiver *Archiver) IdentityMapping() *idtools.IdentityMapping {
+	return archiver.IdMapping
 }
 
 func remapIDs(idMappings *idtools.IDMappings, hdr *tar.Header) error {

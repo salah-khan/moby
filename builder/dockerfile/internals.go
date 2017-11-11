@@ -36,7 +36,7 @@ type Archiver interface {
 	UntarPath(src, dst string) error
 	CopyWithTar(src, dst string) error
 	CopyFileWithTar(src, dst string) error
-	IDMappings() *idtools.IDMappings
+	IdentityMapping() *idtools.IdentityMapping
 }
 
 // The builder will use the following interfaces if the container fs implements
@@ -67,11 +67,11 @@ func tarFunc(i interface{}) containerfs.TarFunc {
 func (b *Builder) getArchiver(src, dst containerfs.Driver) Archiver {
 	t, u := tarFunc(src), untarFunc(dst)
 	return &containerfs.Archiver{
-		SrcDriver:     src,
-		DstDriver:     dst,
-		Tar:           t,
-		Untar:         u,
-		IDMappingsVar: b.idMappings,
+		SrcDriver:  src,
+		DstDriver:  dst,
+		Tar:        t,
+		Untar:      u,
+		IdMapping:  b.idMapping,
 	}
 }
 
@@ -191,18 +191,23 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 		return err
 	}
 
-	identity := idtools.Identity{IdType: idtools.TypeIDPair, IdPair: b.idMappings.RootPair()}
+	identity := idtools.Identity{IdType: idtools.TypeIDPair, IdPair: b.idMapping.IdMappings.RootPair()}
 	// if a chown was requested, perform the steps to get the uid, gid
 	// translated (if necessary because of user namespaces), and replace
 	// the root pair with the chown pair for copy operations
 	if inst.chownStr != "" {
-		identity, err = parseChownFlag(b.Stdout, b.options.Platform, inst.chownStr, destInfo.root.Path(), b.idMappings)
+		identity, err = parseChownFlag(b.options.Platform, inst.chownStr, destInfo.root.Path(), b.idMapping)
 		if err != nil {
 			if b.options.Platform != "windows" {
 				return errors.Wrapf(err, "unable to convert uid/gid chown string to host mapping")
 			} else {
 				return errors.Wrapf(err, "unable to map user account name to host SID")
 			}
+		}
+
+		if identity.IdType == idtools.TypeIDSID {
+			b.idMapping.MappingType = idtools.TypeIdentity
+			b.idMapping.Id = identity
 		}
 	}
 
@@ -219,7 +224,7 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 	return b.exportImage(state, imageMount, runConfigWithCommentCmd)
 }
 
-func parseChownFlag(StdOut io.Writer, platform string, chown, ctrRootPath string, idMappings *idtools.IDMappings) (idtools.Identity, error) {
+func parseChownFlag(platform string, chown, ctrRootPath string, identityMapping *idtools.IdentityMapping) (idtools.Identity, error) {
 
 	if platform == "windows" {
 		return getAccountIdentity(chown, ctrRootPath)
@@ -256,7 +261,7 @@ func parseChownFlag(StdOut io.Writer, platform string, chown, ctrRootPath string
 		}
 
 		// convert as necessary because of user namespaces
-		idPair, err := idMappings.ToHost(idtools.IDPair{UID: uid, GID: gid})
+		idPair, err := identityMapping.IdMappings.ToHost(idtools.IDPair{UID: uid, GID: gid})
 		if err != nil {
 			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "unable to convert uid/gid to host mapping")
 		}

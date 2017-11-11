@@ -55,16 +55,22 @@ const (
   SE_REGISTRY_WOW64_32KEY
 )
 
+const (
+	SDDL_REVISION_1 = 1
+	SDDL_REVISION   = SDDL_REVISION_1
+)
+
 var (
-	ntuserApiset           		= windows.NewLazyDLL("ext-ms-win-ntuser-window-l1-1-0")
-	modadvapi32            		= windows.NewLazySystemDLL("advapi32.dll")
-	procGetVersionExW      		= modkernel32.NewProc("GetVersionExW")
-	procGetProductInfo     		= modkernel32.NewProc("GetProductInfo")
-	procRegLoadKey         		= modadvapi32.NewProc("RegLoadKeyW")
-	procRegUnLoadKey       		= modadvapi32.NewProc("RegUnLoadKeyW")
-	procRegSetKeySecurity  		= modadvapi32.NewProc("RegSetKeySecurity")
-	procGetTempFileName    		= modkernel32.NewProc("GetTempFileNameW")
-	procSetNamedSecurityInfo	= modadvapi32.NewProc("SetNamedSecurityInfoW")
+	ntuserApiset           		  = windows.NewLazyDLL("ext-ms-win-ntuser-window-l1-1-0")
+	modadvapi32            		  = windows.NewLazySystemDLL("advapi32.dll")
+	procGetVersionExW      		  = modkernel32.NewProc("GetVersionExW")
+	procGetProductInfo     		  = modkernel32.NewProc("GetProductInfo")
+	procRegLoadKey         		  = modadvapi32.NewProc("RegLoadKeyW")
+	procRegUnLoadKey       		  = modadvapi32.NewProc("RegUnLoadKeyW")
+	procRegSetKeySecurity  		  = modadvapi32.NewProc("RegSetKeySecurity")
+	procGetTempFileName    		  = modkernel32.NewProc("GetTempFileNameW")
+	procSetNamedSecurityInfo	  = modadvapi32.NewProc("SetNamedSecurityInfoW")
+	procGetSecurityDescriptorDacl = modadvapi32.NewProc("GetSecurityDescriptorDacl")
 )
 
 // OSVersion is a wrapper for Windows version information
@@ -211,6 +217,18 @@ func SetNamedSecurityInfo(objectName *uint16, objectType uint32, securityInforma
 	r0, _, _ := syscall.Syscall9(procSetNamedSecurityInfo.Addr(), 7, uintptr(unsafe.Pointer(objectName)), uintptr(objectType), uintptr(securityInformation), uintptr(unsafe.Pointer(sidOwner)), uintptr(unsafe.Pointer(sidGroup)), uintptr(unsafe.Pointer(dacl)), uintptr(unsafe.Pointer(sacl)), 0, 0)
 	if r0 != 0 {
 		result = syscall.Errno(r0)
+	}
+	return
+}
+
+func GetSecurityDescriptorDacl(securityDescriptor *byte, daclPresent *uint32, dacl **byte, daclDefaulted *uint32) (result error) {
+	r1, _, e1 := syscall.Syscall6(procGetSecurityDescriptorDacl.Addr(), 4, uintptr(unsafe.Pointer(securityDescriptor)), uintptr(unsafe.Pointer(daclPresent)), uintptr(unsafe.Pointer(dacl)), uintptr(unsafe.Pointer(daclDefaulted)), 0, 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			result = syscall.Errno(e1)
+		} else {
+			result = syscall.EINVAL
+		}
 	}
 	return
 }

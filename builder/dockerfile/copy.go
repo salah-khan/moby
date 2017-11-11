@@ -514,7 +514,7 @@ func copyFile(archiver Archiver, source, dest *copyEndpoint, identity idtools.Id
 			return errors.Wrapf(err, "failed to create new directory")
 		}
 	} else {
-		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest.path), 0755, identity.IdPair); err != nil {
+		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest.path), 0755, identity); err != nil {
 			// Normal containers
 			return errors.Wrapf(err, "failed to create new directory")
 		}

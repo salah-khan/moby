@@ -101,7 +101,7 @@ type Daemon struct {
 	seccompEnabled        bool
 	apparmorEnabled       bool
 	shutdown              bool
-	idMappings            *idtools.IDMappings
+	idMapping             idtools.IdentityMapping
 	stores                map[string]daemonStore // By container target platform
 	referenceStore        refstore.Store
 	PluginStore           *plugin.Store // todo: remove
@@ -602,7 +602,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	daemonRepo := filepath.Join(config.Root, "containers")
-	if err := idtools.MkdirAllAndChown(daemonRepo, 0700, rootIDs); err != nil && !os.IsExist(err) {
+	if err := idtools.MkdirAllAndChown(daemonRepo, 0700, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
 
@@ -799,7 +799,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.EventsService = eventsService
 	d.volumes = volStore
 	d.root = config.Root
-	d.idMappings = idMappings
+	d.idMapping.IdMappings = idMappings
 	d.seccompEnabled = sysInfo.Seccomp
 	d.apparmorEnabled = sysInfo.AppArmor
 
@@ -1050,11 +1050,11 @@ func prepareTempDir(rootDir string, rootIdentity idtools.Identity) (string, erro
 	}
 	// We don't remove the content of tmpdir if it's not the default,
 	// it may hold things that do not belong to us.
-	return tmpDir, idtools.MkdirAllAndChown(tmpDir, 0700, rootIdentity.IdPair)
+	return tmpDir, idtools.MkdirAllAndChown(tmpDir, 0700, rootIdentity)
 }
 
 func (daemon *Daemon) setupInitLayer(initPath containerfs.ContainerFS) error {
-	rootIDs := daemon.idMappings.RootPair()
+	rootIDs := daemon.idMapping.IdMappings.RootPair()
 	return initlayer.Setup(initPath, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs})
 }
 

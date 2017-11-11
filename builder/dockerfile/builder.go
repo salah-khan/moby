@@ -52,7 +52,7 @@ type SessionGetter interface {
 
 // BuildManager is shared across all Builder objects
 type BuildManager struct {
-	idMappings *idtools.IDMappings
+	idMapping  *idtools.IdentityMapping
 	backend    builder.Backend
 	pathCache  pathCache // TODO: make this persistent
 	sg         SessionGetter
@@ -60,12 +60,12 @@ type BuildManager struct {
 }
 
 // NewBuildManager creates a BuildManager
-func NewBuildManager(b builder.Backend, sg SessionGetter, fsCache *fscache.FSCache, idMappings *idtools.IDMappings) (*BuildManager, error) {
+func NewBuildManager(b builder.Backend, sg SessionGetter, fsCache *fscache.FSCache, identityMapping *idtools.IdentityMapping) (*BuildManager, error) {
 	bm := &BuildManager{
 		backend:    b,
 		pathCache:  &syncmap.Map{},
 		sg:         sg,
-		idMappings: idMappings,
+		idMapping:  identityMapping,
 		fsCache:    fsCache,
 	}
 	if err := fsCache.RegisterTransport(remotecontext.ClientSessionRemote, NewClientSessionTransport()); err != nil {
@@ -120,7 +120,7 @@ func (bm *BuildManager) Build(ctx context.Context, config backend.BuildConfig) (
 		ProgressWriter: config.ProgressWriter,
 		Backend:        bm.backend,
 		PathCache:      bm.pathCache,
-		IDMappings:     bm.idMappings,
+		IdMapping:      bm.idMapping,
 	}
 	return newBuilder(ctx, builderOptions, os).build(source, dockerfile)
 }
@@ -164,7 +164,7 @@ type builderOptions struct {
 	Backend        builder.Backend
 	ProgressWriter backend.ProgressWriter
 	PathCache      pathCache
-	IDMappings     *idtools.IDMappings
+	IdMapping      *idtools.IdentityMapping
 }
 
 // Builder is a Dockerfile builder
@@ -180,7 +180,7 @@ type Builder struct {
 	docker    builder.Backend
 	clientCtx context.Context
 
-	idMappings       *idtools.IDMappings
+	idMapping        *idtools.IdentityMapping
 	disableCommit    bool
 	imageSources     *imageSources
 	pathCache        pathCache
@@ -203,7 +203,7 @@ func newBuilder(clientCtx context.Context, options builderOptions, os string) *B
 		Aux:              options.ProgressWriter.AuxFormatter,
 		Output:           options.ProgressWriter.Output,
 		docker:           options.Backend,
-		idMappings:       options.IDMappings,
+		idMapping:        options.IdMapping,
 		imageSources:     newImageSources(clientCtx, options),
 		pathCache:        options.PathCache,
 		imageProber:      newImageProber(options.Backend, config.CacheFrom, os, config.NoCache),

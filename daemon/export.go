@@ -63,8 +63,8 @@ func (daemon *Daemon) containerExport(container *container.Container) (arch io.R
 
 	archive, err := archivePath(container.BaseFS, container.BaseFS.Path(), &archive.TarOptions{
 		Compression: archive.Uncompressed,
-		UIDMaps:     daemon.idMappings.UIDs(),
-		GIDMaps:     daemon.idMappings.GIDs(),
+		UIDMaps:     daemon.idMapping.IdMappings.UIDs(),
+		GIDMaps:     daemon.idMapping.IdMappings.GIDs(),
 	})
 	if err != nil {
 		rwlayer.Unmount()

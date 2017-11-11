@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
 	"github.com/pkg/errors"
 
 	"github.com/docker/docker/api/types"
@@ -158,11 +157,14 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig, managed bool) (
 		return nil, systemError{err}
 	}
 
-	rootIDs := daemon.idMappings.RootPair()
-	if err := idtools.MkdirAndChown(container.Root, 0700, rootIDs); err != nil {
+	rootIDs := daemon.idMapping.IdMappings.RootPair()
+
+		
+
+	if err := idtools.MkdirAndChown(container.Root, 0700, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil {
 		return nil, err
 	}
-	if err := idtools.MkdirAndChown(container.CheckpointDir(), 0700, rootIDs); err != nil {
+	if err := idtools.MkdirAndChown(container.CheckpointDir(), 0700, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil {
 		return nil, err
 	}
 

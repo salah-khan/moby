@@ -278,7 +278,7 @@ func (container *Container) SetupWorkingDirectory(rootIdentity idtools.Identity)
 		return err
 	}
 
-	if err := idtools.MkdirAllAndChownNew(pth, 0755, rootIdentity.IdPair); err != nil {
+	if err := idtools.MkdirAllAndChownNew(pth, 0755, rootIdentity); err != nil {
 		pthInfo, err2 := os.Stat(pth)
 		if err2 == nil && pthInfo != nil && !pthInfo.IsDir() {
 			return errors.Errorf("Cannot mkdir: %s is not a directory", container.Config.WorkingDir)

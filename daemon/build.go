@@ -222,6 +222,6 @@ func (daemon *Daemon) CreateImage(config []byte, parent string, platform string)
 }
 
 // IDMappings returns uid/gid mappings for the builder
-func (daemon *Daemon) IDMappings() *idtools.IDMappings {
-	return daemon.idMappings
+func (daemon *Daemon) IdentityMapping() *idtools.IdentityMapping {
+	return &daemon.idMapping
 }
