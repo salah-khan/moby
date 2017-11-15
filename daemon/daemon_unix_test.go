@@ -317,7 +317,7 @@ func TestMigratePre17Volumes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	drv, err := local.New(volumeRoot, idtools.Identity {TypeIDPair, IDPair{UID: 0, GID: 0}})
+	drv, err := local.New(volumeRoot, idtools.Identity{TypeIDPair, IDPair{UID: 0, GID: 0}})
 	if err != nil {
 		t.Fatal(err)
 	}

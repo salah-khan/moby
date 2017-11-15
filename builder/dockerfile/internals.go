@@ -67,11 +67,11 @@ func tarFunc(i interface{}) containerfs.TarFunc {
 func (b *Builder) getArchiver(src, dst containerfs.Driver) Archiver {
 	t, u := tarFunc(src), untarFunc(dst)
 	return &containerfs.Archiver{
-		SrcDriver:  src,
-		DstDriver:  dst,
-		Tar:        t,
-		Untar:      u,
-		IdMapping:  b.idMapping,
+		SrcDriver: src,
+		DstDriver: dst,
+		Tar:       t,
+		Untar:     u,
+		IdMapping: b.idMapping,
 	}
 }
 
@@ -215,7 +215,7 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 		opts := copyFileOptions{
 			decompress: inst.allowLocalDecompression,
 			archiver:   b.getArchiver(info.root, destInfo.root),
-			identity:  identity,
+			identity:   identity,
 		}
 		if err := performCopyForInfo(destInfo, info, opts); err != nil {
 			return errors.Wrapf(err, "failed to copy files")

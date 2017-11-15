@@ -762,7 +762,7 @@ func TestTarWithOptionsChownOptsAlwaysOverridesIdPair(t *testing.T) {
 		reader, err := TarWithOptions(filePath, testCase.opts)
 		require.NoError(t, err)
 		tr := tar.NewReader(reader)
-	defer reader.Close()
+		defer reader.Close()
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {

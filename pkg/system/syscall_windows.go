@@ -1,18 +1,18 @@
 package system
 
 import (
-	"unsafe"
 	"syscall"
+	"unsafe"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 )
 
 const (
-	ERROR_SUCCESS      				  		= 0
-	ERROR_NO_SUCH_USER syscall.Errno  		= 1317
-	ERROR_NO_SUCH_GROUP syscall.Errno 		= 1319
-	ERROR_UNSUPPORTED_TYPE syscall.Errno 	= 1630
+	ERROR_SUCCESS                        = 0
+	ERROR_NO_SUCH_USER     syscall.Errno = 1317
+	ERROR_NO_SUCH_GROUP    syscall.Errno = 1319
+	ERROR_UNSUPPORTED_TYPE syscall.Errno = 1630
 )
 
 const (
@@ -40,19 +40,19 @@ const (
 )
 
 const (
-  SE_UNKNOWN_OBJECT_TYPE = iota
-  SE_FILE_OBJECT
-  SE_SERVICE
-  SE_PRINTER
-  SE_REGISTRY_KEY
-  SE_LMSHARE
-  SE_KERNEL_OBJECT
-  SE_WINDOW_OBJECT
-  SE_DS_OBJECT
-  SE_DS_OBJECT_ALL
-  SE_PROVIDER_DEFINED_OBJECT
-  SE_WMIGUID_OBJECT
-  SE_REGISTRY_WOW64_32KEY
+	SE_UNKNOWN_OBJECT_TYPE = iota
+	SE_FILE_OBJECT
+	SE_SERVICE
+	SE_PRINTER
+	SE_REGISTRY_KEY
+	SE_LMSHARE
+	SE_KERNEL_OBJECT
+	SE_WINDOW_OBJECT
+	SE_DS_OBJECT
+	SE_DS_OBJECT_ALL
+	SE_PROVIDER_DEFINED_OBJECT
+	SE_WMIGUID_OBJECT
+	SE_REGISTRY_WOW64_32KEY
 )
 
 const (
@@ -61,15 +61,15 @@ const (
 )
 
 var (
-	ntuserApiset           		  = windows.NewLazyDLL("ext-ms-win-ntuser-window-l1-1-0")
-	modadvapi32            		  = windows.NewLazySystemDLL("advapi32.dll")
-	procGetVersionExW      		  = modkernel32.NewProc("GetVersionExW")
-	procGetProductInfo     		  = modkernel32.NewProc("GetProductInfo")
-	procRegLoadKey         		  = modadvapi32.NewProc("RegLoadKeyW")
-	procRegUnLoadKey       		  = modadvapi32.NewProc("RegUnLoadKeyW")
-	procRegSetKeySecurity  		  = modadvapi32.NewProc("RegSetKeySecurity")
-	procGetTempFileName    		  = modkernel32.NewProc("GetTempFileNameW")
-	procSetNamedSecurityInfo	  = modadvapi32.NewProc("SetNamedSecurityInfoW")
+	ntuserApiset                  = windows.NewLazyDLL("ext-ms-win-ntuser-window-l1-1-0")
+	modadvapi32                   = windows.NewLazySystemDLL("advapi32.dll")
+	procGetVersionExW             = modkernel32.NewProc("GetVersionExW")
+	procGetProductInfo            = modkernel32.NewProc("GetProductInfo")
+	procRegLoadKey                = modadvapi32.NewProc("RegLoadKeyW")
+	procRegUnLoadKey              = modadvapi32.NewProc("RegUnLoadKeyW")
+	procRegSetKeySecurity         = modadvapi32.NewProc("RegSetKeySecurity")
+	procGetTempFileName           = modkernel32.NewProc("GetTempFileNameW")
+	procSetNamedSecurityInfo      = modadvapi32.NewProc("SetNamedSecurityInfoW")
 	procGetSecurityDescriptorDacl = modadvapi32.NewProc("GetSecurityDescriptorDacl")
 )
 

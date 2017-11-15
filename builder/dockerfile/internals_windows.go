@@ -6,17 +6,17 @@ package dockerfile
 import (
 	"os"
 	"path/filepath"
-	"unsafe"
 	"strconv"
+	"unsafe"
 
+	"github.com/Microsoft/go-winio"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/docker/docker/pkg/idtools"
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/docker/pkg/system"
-	"github.com/docker/docker/pkg/ioutils"
-	"github.com/docker/docker/pkg/fileutils"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/windows"
-	"github.com/Microsoft/go-winio"
 )
 
 func getAccountIdentity(accountName string, ctrRootPath string) (idtools.Identity, error) {
@@ -63,7 +63,7 @@ func getAccountIdentity(accountName string, ctrRootPath string) (idtools.Identit
 
 func lookupNTAccount(accountName string, samDatabasePath string) (string, error) {
 
-	tempDirectory, err := ioutils.TempDir("","SAMDB-")
+	tempDirectory, err := ioutils.TempDir("", "SAMDB-")
 	if err != nil {
 		return "", err
 	}
@@ -286,7 +286,7 @@ func lookupNTGroup(groupNamesKey windows.Handle, groupStr string, computerSid st
 	}
 
 	accountLocated := false
-	accountBuffer := make([]uint16, maxSubKeyLen + 1)
+	accountBuffer := make([]uint16, maxSubKeyLen+1)
 	maximumAccountBufferLength := uint32(len(accountBuffer))
 	accountBufferLength := maximumAccountBufferLength
 	accountSid := ""
@@ -337,8 +337,8 @@ func lookupNTGroup(groupNamesKey windows.Handle, groupStr string, computerSid st
 
 func changeKeySecurity(rootKey windows.Handle, subkey string) error {
 	var innerKey windows.Handle
- 
-	err := windows.RegOpenKeyEx(rootKey, windows.StringToUTF16Ptr(subkey), 0, system.READ_CONTROL | system.WRITE_DAC, &innerKey)
+
+	err := windows.RegOpenKeyEx(rootKey, windows.StringToUTF16Ptr(subkey), 0, system.READ_CONTROL|system.WRITE_DAC, &innerKey)
 	if err != nil {
 		return err
 	}
@@ -359,12 +359,12 @@ func changeKeySecurity(rootKey windows.Handle, subkey string) error {
 }
 
 func getComputerSid(accountKey windows.Handle) (string, error) {
- 
- 	var dataLength uint32
- 	var valueType uint32
- 	var dataBuffer []byte
 
- 	dataLength = 0
+	var dataLength uint32
+	var valueType uint32
+	var dataBuffer []byte
+
+	dataLength = 0
 
 	err := windows.RegQueryValueEx(accountKey, windows.StringToUTF16Ptr("V"), nil, &valueType, nil, &dataLength)
 	if err != nil {
@@ -386,7 +386,7 @@ func getComputerSid(accountKey windows.Handle) (string, error) {
 	secondSubAuthority := *(*uint32)(unsafe.Pointer(&dataBuffer[dataLength-8]))
 	thirdSubAuthority := *(*uint32)(unsafe.Pointer(&dataBuffer[dataLength-4]))
 
-	computerSid := "S-1-5-21-" + strconv.FormatUint(uint64(firstSubAuthority), 10) + "-" + strconv.FormatUint(uint64(secondSubAuthority),10 ) + "-" + strconv.FormatUint(uint64(thirdSubAuthority), 10)
+	computerSid := "S-1-5-21-" + strconv.FormatUint(uint64(firstSubAuthority), 10) + "-" + strconv.FormatUint(uint64(secondSubAuthority), 10) + "-" + strconv.FormatUint(uint64(thirdSubAuthority), 10)
 
 	return computerSid, nil
 }

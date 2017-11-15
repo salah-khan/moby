@@ -58,8 +58,8 @@ type (
 // this package with a pluggable Untar function. Also, to facilitate the passing of specific id
 // mappings for untar, an Archiver can be created with maps which will then be passed to Untar operations.
 type Archiver struct {
-	Untar         func(io.Reader, string, *TarOptions) error
-	IdMapping     *idtools.IdentityMapping
+	Untar     func(io.Reader, string, *TarOptions) error
+	IdMapping *idtools.IdentityMapping
 }
 
 // NewDefaultArchiver returns a new Archiver without any IDMappings
@@ -891,7 +891,7 @@ loop:
 			parent := filepath.Dir(hdr.Name)
 			parentPath := filepath.Join(dest, parent)
 			if _, err := os.Lstat(parentPath); err != nil && os.IsNotExist(err) {
-				err = idtools.MkdirAllAndChownNew(parentPath, 0777, idtools.Identity{IdType: idtools.TypeIDPair, IdPair:rootIDs})
+				err = idtools.MkdirAllAndChownNew(parentPath, 0777, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs})
 				if err != nil {
 					return err
 				}
@@ -1062,7 +1062,7 @@ func (archiver *Archiver) CopyWithTar(src, dst string) error {
 	rootIDs := archiver.IdMapping.IdMappings.RootPair()
 	// Create dst, copy src's content into it
 	logrus.Debugf("Creating dest directory: %s", dst)
-	if err := idtools.MkdirAllAndChownNew(dst, 0755, idtools.Identity{IdType: idtools.TypeIDPair, IdPair:rootIDs}); err != nil {
+	if err := idtools.MkdirAllAndChownNew(dst, 0755, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: rootIDs}); err != nil {
 		return err
 	}
 	logrus.Debugf("Calling TarUntar(%s, %s)", src, dst)

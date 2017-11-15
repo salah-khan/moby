@@ -428,7 +428,7 @@ func downloadSource(output io.Writer, stdout io.Writer, srcURL string) (remote b
 
 type copyFileOptions struct {
 	decompress bool
-	identity  idtools.Identity
+	identity   idtools.Identity
 	archiver   Archiver
 }
 

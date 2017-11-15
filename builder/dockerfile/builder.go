@@ -52,21 +52,21 @@ type SessionGetter interface {
 
 // BuildManager is shared across all Builder objects
 type BuildManager struct {
-	idMapping  *idtools.IdentityMapping
-	backend    builder.Backend
-	pathCache  pathCache // TODO: make this persistent
-	sg         SessionGetter
-	fsCache    *fscache.FSCache
+	idMapping *idtools.IdentityMapping
+	backend   builder.Backend
+	pathCache pathCache // TODO: make this persistent
+	sg        SessionGetter
+	fsCache   *fscache.FSCache
 }
 
 // NewBuildManager creates a BuildManager
 func NewBuildManager(b builder.Backend, sg SessionGetter, fsCache *fscache.FSCache, identityMapping *idtools.IdentityMapping) (*BuildManager, error) {
 	bm := &BuildManager{
-		backend:    b,
-		pathCache:  &syncmap.Map{},
-		sg:         sg,
-		idMapping:  identityMapping,
-		fsCache:    fsCache,
+		backend:   b,
+		pathCache: &syncmap.Map{},
+		sg:        sg,
+		idMapping: identityMapping,
+		fsCache:   fsCache,
 	}
 	if err := fsCache.RegisterTransport(remotecontext.ClientSessionRemote, NewClientSessionTransport()); err != nil {
 		return nil, err

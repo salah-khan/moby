@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Microsoft/go-winio"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/system"
 	"golang.org/x/sys/windows"
-	"github.com/Microsoft/go-winio"
 )
 
 var pathBlacklist = map[string]bool{
@@ -33,15 +33,15 @@ func fixPermissions(source, destination string, identity idtools.Identity, overr
 		sid, err = windows.StringToSid(identity.IdSid)
 		if err != nil {
 			return err
-		
+
 		}
 
 		// Owners on *nix have read/write/delete/read control and write DAC.
 		// Add an ACE that grants this to the user/group specified with the
 		// chown option.
 
-   		sddlString := system.SddlAdministratorsLocalSystem
-   		sddlString += "(A;OICI;GRGWRCWDSD;;;" + identity.IdSid + ")"
+		sddlString := system.SddlAdministratorsLocalSystem
+		sddlString += "(A;OICI;GRGWRCWDSD;;;" + identity.IdSid + ")"
 
 		securityDescriptor, err := winio.SddlToSecurityDescriptor(sddlString)
 		if err != nil {
@@ -52,12 +52,12 @@ func fixPermissions(source, destination string, identity idtools.Identity, overr
 		var daclDefaulted uint32
 		var dacl *byte
 
-   		err = system.GetSecurityDescriptorDacl(&securityDescriptor[0], &daclPresent, &dacl, &daclDefaulted)
+		err = system.GetSecurityDescriptorDacl(&securityDescriptor[0], &daclPresent, &dacl, &daclDefaulted)
 		if err != nil {
 			return err
 		}
 
-		err = system.SetNamedSecurityInfo(windows.StringToUTF16Ptr(destination), system.SE_FILE_OBJECT, system.OWNER_SECURITY_INFORMATION | system.DACL_SECURITY_INFORMATION, sid, nil, dacl, nil)
+		err = system.SetNamedSecurityInfo(windows.StringToUTF16Ptr(destination), system.SE_FILE_OBJECT, system.OWNER_SECURITY_INFORMATION|system.DACL_SECURITY_INFORMATION, sid, nil, dacl, nil)
 		if err != nil {
 			return err
 		}

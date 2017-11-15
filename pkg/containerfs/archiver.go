@@ -11,8 +11,8 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/system"
 	"github.com/sirupsen/logrus"
-
 )
+
 // TarFunc provides a function definition for a custom Tar function
 type TarFunc func(string, *archive.TarOptions) (io.ReadCloser, error)
 
@@ -21,11 +21,11 @@ type UntarFunc func(io.Reader, string, *archive.TarOptions) error
 
 // Archiver provides a similar implementation of the archive.Archiver package with the rootfs abstraction
 type Archiver struct {
-	SrcDriver     Driver
-	DstDriver     Driver
-	Tar           TarFunc
-	Untar         UntarFunc
-	IdMapping     *idtools.IdentityMapping
+	SrcDriver Driver
+	DstDriver Driver
+	Tar       TarFunc
+	Untar     UntarFunc
+	IdMapping *idtools.IdentityMapping
 }
 
 // TarUntar is a convenience function which calls Tar and Untar, with the output of one piped into the other.
@@ -74,7 +74,7 @@ func (archiver *Archiver) CopyWithTar(src, dst string) error {
 	// if this archiver is set up with ID mapping we need to create
 	// the new destination directory with the remapped root UID/GID pair
 	// as owner
-	
+
 	var identity idtools.Identity
 
 	if archiver.IdMapping.MappingType == idtools.TypeMapping {

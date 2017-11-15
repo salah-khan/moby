@@ -12,7 +12,7 @@ import (
 // just a wrapper around system.MkdirAll.
 func mkdirAs(path string, mode os.FileMode, identity Identity, mkAll, chownExisting bool) error {
 
-    sddlString := ""
+	sddlString := ""
 
 	if err := system.MkdirAll(path, mode, sddlString); err != nil && !os.IsExist(err) {
 		return err

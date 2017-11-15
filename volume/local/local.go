@@ -54,9 +54,9 @@ func New(scope string, rootIdentity idtools.Identity) (*Root, error) {
 	}
 
 	r := &Root{
-		scope:   scope,
-		path:    rootDirectory,
-		volumes: make(map[string]*localVolume),
+		scope:        scope,
+		path:         rootDirectory,
+		volumes:      make(map[string]*localVolume),
 		rootIdentity: rootIdentity,
 	}
 
@@ -111,10 +111,10 @@ func New(scope string, rootIdentity idtools.Identity) (*Root, error) {
 // manages the creation/removal of volumes. It uses only standard vfs
 // commands to create/remove dirs within its provided scope.
 type Root struct {
-	m       sync.Mutex
-	scope   string
-	path    string
-	volumes map[string]*localVolume
+	m            sync.Mutex
+	scope        string
+	path         string
+	volumes      map[string]*localVolume
 	rootIdentity idtools.Identity
 }
 

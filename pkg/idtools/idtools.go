@@ -124,21 +124,21 @@ type IDPair struct {
 type IdentityType int
 
 const (
-    TypeIDPair IdentityType = iota
-    TypeIDSID
+	TypeIDPair IdentityType = iota
+	TypeIDSID
 )
 
 type IdentityMappingType int
 
 const (
-    TypeMapping IdentityMappingType = iota
-    TypeIdentity
+	TypeMapping IdentityMappingType = iota
+	TypeIdentity
 )
 
 type Identity struct {
 	IdType IdentityType
 	IdPair IDPair
-	IdSid string
+	IdSid  string
 }
 
 // IDMappings contains a mappings of UIDs and GIDs
@@ -149,7 +149,7 @@ type IDMappings struct {
 
 type IdentityMapping struct {
 	MappingType IdentityMappingType
-	IdMappings 	IDMappings
+	IdMappings  IDMappings
 	Id          Identity
 }
 
