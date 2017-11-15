@@ -149,7 +149,7 @@ type IDMappings struct {
 
 type IdentityMapping struct {
 	MappingType IdentityMappingType
-	IdMappings 	*IDMappings
+	IdMappings 	IDMappings
 	Id          Identity
 }
 

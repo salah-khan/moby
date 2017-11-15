@@ -1086,7 +1086,7 @@ func parseRemappedRoot(usergrp string) (string, string, error) {
 	return username, groupname, nil
 }
 
-func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
+func setupRemappedRoot(config *config.Config) (*idtools.IdentityMapping, error) {
 	if runtime.GOOS != "linux" && config.RemappedRoot != "" {
 		return nil, fmt.Errorf("User namespaces are only supported on Linux")
 	}
@@ -1102,7 +1102,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 			// Cannot setup user namespaces with a 1-to-1 mapping; "--root=0:0" is a no-op
 			// effectively
 			logrus.Warn("User namespaces: root cannot be remapped with itself; user namespaces are OFF")
-			return &idtools.IDMappings{}, nil
+			return &idtools.IdentityMapping{MappingType: idtools.TypeMapping}, nil
 		}
 		logrus.Infof("User namespaces: ID ranges will be mapped to subuid/subgid ranges of: %s:%s", username, groupname)
 		// update remapped root setting now that we have resolved them to actual names
@@ -1112,9 +1112,9 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "Can't create ID mappings: %v")
 		}
-		return mappings, nil
+		return &idtools.IdentityMapping{MappingType: idtools.TypeMapping, IdMappings: mappings}, nil
 	}
-	return &idtools.IDMappings{}, nil
+	return &idtools.IdentityMapping{MappingType: idtools.TypeMapping}, nil
 }
 
 func setupDaemonRoot(config *config.Config, rootDir string, rootIdentity idtools.Identity) error {

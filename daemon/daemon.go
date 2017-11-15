@@ -101,7 +101,7 @@ type Daemon struct {
 	seccompEnabled        bool
 	apparmorEnabled       bool
 	shutdown              bool
-	idMapping             idtools.IdentityMapping
+	idMapping             *idtools.IdentityMapping
 	stores                map[string]daemonStore // By container target platform
 	referenceStore        refstore.Store
 	PluginStore           *plugin.Store // todo: remove
@@ -541,7 +541,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	if err != nil {
 		return nil, err
 	}
-	rootIDs := idMappings.RootPair()
+	rootIDs := idMappings.IdMappings.RootPair()
 	if err := setupDaemonProcess(config); err != nil {
 		return nil, err
 	}
@@ -670,7 +670,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 			MetadataStorePathTemplate: filepath.Join(config.Root, "image", "%s", "layerdb"),
 			GraphDriver:               ds.graphDriver,
 			GraphDriverOptions:        config.GraphOptions,
-			IDMappings:                idMappings,
+			IdMapping:                 idMappings,
 			PluginGetter:              d.PluginStore,
 			ExperimentalEnabled:       config.Experimental,
 			OS:                        operatingSystem,
@@ -799,7 +799,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.EventsService = eventsService
 	d.volumes = volStore
 	d.root = config.Root
-	d.idMapping.IdMappings = idMappings
+	d.idMapping = idMappings
 	d.seccompEnabled = sysInfo.Seccomp
 	d.apparmorEnabled = sysInfo.AppArmor
 
@@ -1230,7 +1230,7 @@ func CreateDaemonRoot(config *config.Config) error {
 	if err != nil {
 		return err
 	}
-	return setupDaemonRoot(config, realRoot, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idMappings.RootPair()})
+	return setupDaemonRoot(config, realRoot, idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idMappings.IdMappings.RootPair()})
 }
 
 // checkpointAndSave grabs a container lock to safely call container.CheckpointTo

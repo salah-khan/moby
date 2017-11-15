@@ -1115,7 +1115,7 @@ func (archiver *Archiver) CopyFileWithTar(src, dst string) (err error) {
 			hdr.Name = filepath.Base(dst)
 			hdr.Mode = int64(chmodTarEntry(os.FileMode(hdr.Mode)))
 
-			if err := remapIDs(archiver.IdMapping.IdMappings, hdr); err != nil {
+			if err := remapIDs(&(archiver.IdMapping).IdMappings, hdr); err != nil {
 				return err
 			}
 

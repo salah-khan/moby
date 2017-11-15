@@ -223,5 +223,5 @@ func (daemon *Daemon) CreateImage(config []byte, parent string, platform string)
 
 // IDMappings returns uid/gid mappings for the builder
 func (daemon *Daemon) IdentityMapping() *idtools.IdentityMapping {
-	return &daemon.idMapping
+	return daemon.idMapping
 }

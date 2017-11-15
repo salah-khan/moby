@@ -465,8 +465,8 @@ func (daemon *Daemon) cleanupMounts() error {
 	return nil
 }
 
-func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
-	return &idtools.IDMappings{}, nil
+func setupRemappedRoot(config *config.Config) (*idtools.IdentityMapping, error) {
+	return &idtools.IdentityMapping{MappingType: idtools.TypeMapping}, nil
 }
 
 func setupDaemonRoot(config *config.Config, rootDir string, rootIdentity idtools.Identity) error {

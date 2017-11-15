@@ -78,7 +78,7 @@ func (archiver *Archiver) CopyWithTar(src, dst string) error {
 	var identity idtools.Identity
 
 	if archiver.IdMapping.MappingType == idtools.TypeMapping {
-		identity = idtools.Identity{IdType: idtools.TypeIDPair, IdPair:archiver.IdMapping.IdMappings.RootPair()}
+		identity = idtools.Identity{IdType: idtools.TypeIDPair, IdPair: archiver.IdMapping.IdMappings.RootPair()}
 	} else {
 		identity = archiver.IdMapping.Id
 	}
@@ -153,7 +153,7 @@ func (archiver *Archiver) CopyFileWithTar(src, dst string) (err error) {
 				hdr.Mode = int64(os.FileMode(hdr.Mode))
 			}
 
-			if err := remapIDs(archiver.IdMapping.IdMappings, hdr); err != nil {
+			if err := remapIDs(&(archiver.IdMapping).IdMappings, hdr); err != nil {
 				return err
 			}
 
