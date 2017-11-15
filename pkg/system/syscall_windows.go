@@ -1,16 +1,76 @@
 package system
 
 import (
+	"syscall"
 	"unsafe"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 )
 
+const (
+	ERROR_SUCCESS                        = 0
+	ERROR_NO_SUCH_USER     syscall.Errno = 1317
+	ERROR_NO_SUCH_GROUP    syscall.Errno = 1319
+	ERROR_UNSUPPORTED_TYPE syscall.Errno = 1630
+)
+
+const (
+	READ_CONTROL           = 0x00020000
+	WRITE_DAC              = 0x00040000
+	WRITE_OWNER            = 0x00080000
+	ACCESS_SYSTEM_SECURITY = 0x01000000
+)
+
+const (
+	OWNER_SECURITY_INFORMATION               = 0x00000001
+	GROUP_SECURITY_INFORMATION               = 0x00000002
+	DACL_SECURITY_INFORMATION                = 0x00000004
+	SACL_SECURITY_INFORMATION                = 0x00000008
+	LABEL_SECURITY_INFORMATION               = 0x00000010
+	ATTRIBUTE_SECURITY_INFORMATION           = 0x00000020
+	SCOPE_SECURITY_INFORMATION               = 0x00000040
+	PROCESS_TRUST_LABEL_SECURITY_INFORMATION = 0x00000080
+	ACCESS_FILTER_SECURITY_INFORMATION       = 0x00000100
+	BACKUP_SECURITY_INFORMATION              = 0x00010000
+	PROTECTED_DACL_SECURITY_INFORMATION      = 0x80000000
+	PROTECTED_SACL_SECURITY_INFORMATION      = 0x40000000
+	UNPROTECTED_DACL_SECURITY_INFORMATION    = 0x20000000
+	UNPROTECTED_SACL_SECURITY_INFORMATION    = 0x10000000
+)
+
+const (
+	SE_UNKNOWN_OBJECT_TYPE = iota
+	SE_FILE_OBJECT
+	SE_SERVICE
+	SE_PRINTER
+	SE_REGISTRY_KEY
+	SE_LMSHARE
+	SE_KERNEL_OBJECT
+	SE_WINDOW_OBJECT
+	SE_DS_OBJECT
+	SE_DS_OBJECT_ALL
+	SE_PROVIDER_DEFINED_OBJECT
+	SE_WMIGUID_OBJECT
+	SE_REGISTRY_WOW64_32KEY
+)
+
+const (
+	SDDL_REVISION_1 = 1
+	SDDL_REVISION   = SDDL_REVISION_1
+)
+
 var (
-	ntuserApiset       = windows.NewLazyDLL("ext-ms-win-ntuser-window-l1-1-0")
-	procGetVersionExW  = modkernel32.NewProc("GetVersionExW")
-	procGetProductInfo = modkernel32.NewProc("GetProductInfo")
+	ntuserApiset                  = windows.NewLazyDLL("ext-ms-win-ntuser-window-l1-1-0")
+	modadvapi32                   = windows.NewLazySystemDLL("advapi32.dll")
+	procGetVersionExW             = modkernel32.NewProc("GetVersionExW")
+	procGetProductInfo            = modkernel32.NewProc("GetProductInfo")
+	procRegLoadKey                = modadvapi32.NewProc("RegLoadKeyW")
+	procRegUnLoadKey              = modadvapi32.NewProc("RegUnLoadKeyW")
+	procRegSetKeySecurity         = modadvapi32.NewProc("RegSetKeySecurity")
+	procGetTempFileName           = modkernel32.NewProc("GetTempFileNameW")
+	procSetNamedSecurityInfo      = modadvapi32.NewProc("SetNamedSecurityInfoW")
+	procGetSecurityDescriptorDacl = modadvapi32.NewProc("GetSecurityDescriptorDacl")
 )
 
 // OSVersion is a wrapper for Windows version information
@@ -119,4 +179,56 @@ func HasWin32KSupport() bool {
 	// may support win32k in containers even if the host does not support ntuser
 	// APIs.
 	return ntuserApiset.Load() == nil
+}
+
+func RegLoadKey(key windows.Handle, subkeyname *uint16, file *uint16) (regerrno error) {
+	r0, _, _ := syscall.Syscall6(procRegLoadKey.Addr(), 3, uintptr(unsafe.Pointer(key)), uintptr(unsafe.Pointer(subkeyname)), uintptr(unsafe.Pointer(file)), 0, 0, 0)
+	if r0 != 0 {
+		regerrno = syscall.Errno(r0)
+	}
+	return
+}
+
+func RegUnLoadKey(key windows.Handle, subkeyname *uint16) (regerrno error) {
+	r0, _, _ := syscall.Syscall6(procRegUnLoadKey.Addr(), 2, uintptr(unsafe.Pointer(key)), uintptr(unsafe.Pointer(subkeyname)), 0, 0, 0, 0)
+	if r0 != 0 {
+		regerrno = syscall.Errno(r0)
+	}
+	return
+}
+
+func RegSetKeySecurity(key windows.Handle, securityInformation uint32, securityDescriptor *byte) (regerrno error) {
+	r0, _, _ := syscall.Syscall6(procRegSetKeySecurity.Addr(), 3, uintptr(unsafe.Pointer(key)), uintptr(securityInformation), uintptr(unsafe.Pointer(securityDescriptor)), 0, 0, 0)
+	if r0 != 0 {
+		regerrno = syscall.Errno(r0)
+	}
+	return
+}
+
+func GetTempFileName(pathName *uint16, prefix *uint16, unique uint32, tempFileName *uint16) (err error) {
+	r0, _, _ := syscall.Syscall6(procGetTempFileName.Addr(), 4, uintptr(unsafe.Pointer(pathName)), uintptr(unsafe.Pointer(prefix)), uintptr(unique), uintptr(unsafe.Pointer(pathName)), 0, 0)
+	if r0 != 0 {
+		err = syscall.Errno(r0)
+	}
+	return
+}
+
+func SetNamedSecurityInfo(objectName *uint16, objectType uint32, securityInformation uint32, sidOwner *windows.SID, sidGroup *windows.SID, dacl *byte, sacl *byte) (result error) {
+	r0, _, _ := syscall.Syscall9(procSetNamedSecurityInfo.Addr(), 7, uintptr(unsafe.Pointer(objectName)), uintptr(objectType), uintptr(securityInformation), uintptr(unsafe.Pointer(sidOwner)), uintptr(unsafe.Pointer(sidGroup)), uintptr(unsafe.Pointer(dacl)), uintptr(unsafe.Pointer(sacl)), 0, 0)
+	if r0 != 0 {
+		result = syscall.Errno(r0)
+	}
+	return
+}
+
+func GetSecurityDescriptorDacl(securityDescriptor *byte, daclPresent *uint32, dacl **byte, daclDefaulted *uint32) (result error) {
+	r1, _, e1 := syscall.Syscall6(procGetSecurityDescriptorDacl.Addr(), 4, uintptr(unsafe.Pointer(securityDescriptor)), uintptr(unsafe.Pointer(daclPresent)), uintptr(unsafe.Pointer(dacl)), uintptr(unsafe.Pointer(daclDefaulted)), 0, 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			result = syscall.Errno(e1)
+		} else {
+			result = syscall.EINVAL
+		}
+	}
+	return
 }
