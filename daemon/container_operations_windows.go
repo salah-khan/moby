@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/docker/docker/container"
+	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/system"
 	"github.com/docker/libnetwork"
 	"github.com/pkg/errors"
@@ -24,8 +25,14 @@ func (daemon *Daemon) setupConfigDir(c *container.Container) (setupErr error) {
 	localPath := c.ConfigsDirPath()
 	logrus.Debugf("configs: setting up config dir: %s", localPath)
 
+	acl := system.SddlAdministratorsLocalSystem
+
+	if daemon.idMapping.MappingType == idtools.TypeIdentity {
+		acl += "(A;OICI;GA;;;" + daemon.idMapping.Id.IdSid + ")"
+	}
+
 	// create local config root
-	if err := system.MkdirAllWithACL(localPath, 0, system.SddlAdministratorsLocalSystem); err != nil {
+	if err := system.MkdirAllWithACL(localPath, 0, acl); err != nil {
 		return errors.Wrap(err, "error creating config dir")
 	}
 
