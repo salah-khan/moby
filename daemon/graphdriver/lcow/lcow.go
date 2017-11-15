@@ -180,18 +180,24 @@ func InitDriver(dataRoot string, options []string, _, _ []idtools.IDMap) (graphd
 		}
 	}
 
+	var identity idtools.Identity
+
+	identity.IdType = idtools.TypeIDPair
+	identity.IdPair.UID = 0
+	identity.IdPair.GID = 0
+
 	// Make sure the dataRoot directory is created
-	if err := idtools.MkdirAllAs(dataRoot, 0700, 0, 0); err != nil {
+	if err := idtools.MkdirAllAs(dataRoot, 0700, identity); err != nil {
 		return nil, fmt.Errorf("%s failed to create '%s': %v", title, dataRoot, err)
 	}
 
 	// Make sure the cache directory is created under dataRoot
-	if err := idtools.MkdirAllAs(cd, 0700, 0, 0); err != nil {
+	if err := idtools.MkdirAllAs(cd, 0700, identity); err != nil {
 		return nil, fmt.Errorf("%s failed to create '%s': %v", title, cd, err)
 	}
 
 	// Make sure the scratch directory is created under dataRoot
-	if err := idtools.MkdirAllAs(sd, 0700, 0, 0); err != nil {
+	if err := idtools.MkdirAllAs(sd, 0700, identity); err != nil {
 		return nil, fmt.Errorf("%s failed to create '%s': %v", title, sd, err)
 	}
 
