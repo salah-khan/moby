@@ -68,13 +68,13 @@ func getInodeFromStat(stat interface{}) (inode uint64, err error) {
 	return
 }
 
-func getFileUIDGID(stat interface{}) (idtools.Identity, error) {
+func getFileUIDGID(stat interface{}) (idtools.IDPair, error) {
 	s, ok := stat.(*syscall.Stat_t)
 
 	if !ok {
-		return idtools.Identity{typeIDPair, IDPair{}}, errors.New("cannot convert stat value to syscall.Stat_t")
+		return idtools.IDPair{}, errors.New("cannot convert stat value to syscall.Stat_t")
 	}
-	return idtools.Identity{typeIDPair, IDPair{UID: int(s.Uid), GID: int(s.Gid)}}, nil
+	return idtools.IDPair{UID: int(s.Uid), GID: int(s.Gid)}, nil
 }
 
 // handleTarTypeBlockCharFifo is an OS-specific helper function used by

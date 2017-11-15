@@ -428,7 +428,7 @@ func downloadSource(output io.Writer, stdout io.Writer, srcURL string) (remote b
 
 type copyFileOptions struct {
 	decompress bool
-	identity   idtools.Identity
+	chownPair  idtools.IDPair
 	archiver   Archiver
 }
 
@@ -458,7 +458,7 @@ func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions)
 		return errors.Wrapf(err, "source path not found")
 	}
 	if src.IsDir() {
-		return copyDirectory(archiver, srcEndpoint, destEndpoint, options.identity)
+		return copyDirectory(archiver, srcEndpoint, destEndpoint, options.chownPair)
 	}
 	if options.decompress && isArchivePath(source.root, srcPath) && !source.noDecompress {
 		return archiver.UntarPath(srcPath, destPath)
@@ -476,7 +476,7 @@ func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions)
 		destPath = dest.root.Join(destPath, source.root.Base(source.path))
 		destEndpoint = &copyEndpoint{driver: dest.root, path: destPath}
 	}
-	return copyFile(archiver, srcEndpoint, destEndpoint, options.identity)
+	return copyFile(archiver, srcEndpoint, destEndpoint, options.chownPair)
 }
 
 func isArchivePath(driver containerfs.ContainerFS, path string) bool {
@@ -494,7 +494,7 @@ func isArchivePath(driver containerfs.ContainerFS, path string) bool {
 	return err == nil
 }
 
-func copyDirectory(archiver Archiver, source, dest *copyEndpoint, identity idtools.Identity) error {
+func copyDirectory(archiver Archiver, source, dest *copyEndpoint, chownPair idtools.IDPair) error {
 	destExists, err := isExistingDirectory(dest)
 	if err != nil {
 		return errors.Wrapf(err, "failed to query destination path")
@@ -504,17 +504,17 @@ func copyDirectory(archiver Archiver, source, dest *copyEndpoint, identity idtoo
 		return errors.Wrapf(err, "failed to copy directory")
 	}
 	// TODO: @gupta-ak. Investigate how LCOW permission mappings will work.
-	return fixPermissions(source.path, dest.path, identity, !destExists)
+	return fixPermissions(source.path, dest.path, chownPair, !destExists)
 }
 
-func copyFile(archiver Archiver, source, dest *copyEndpoint, identity idtools.Identity) error {
+func copyFile(archiver Archiver, source, dest *copyEndpoint, chownPair idtools.IDPair) error {
 	if runtime.GOOS == "windows" && dest.driver.OS() == "linux" {
 		// LCOW
 		if err := dest.driver.MkdirAll(dest.driver.Dir(dest.path), 0755); err != nil {
 			return errors.Wrapf(err, "failed to create new directory")
 		}
 	} else {
-		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest.path), 0755, identity); err != nil {
+		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest.path), 0755, chownPair); err != nil {
 			// Normal containers
 			return errors.Wrapf(err, "failed to create new directory")
 		}
@@ -524,7 +524,7 @@ func copyFile(archiver Archiver, source, dest *copyEndpoint, identity idtools.Id
 		return errors.Wrapf(err, "failed to copy file")
 	}
 	// TODO: @gupta-ak. Investigate how LCOW permission mappings will work.
-	return fixPermissions(source.path, dest.path, identity, false)
+	return fixPermissions(source.path, dest.path, chownPair, false)
 }
 
 func endsInSlash(driver containerfs.Driver, path string) bool {

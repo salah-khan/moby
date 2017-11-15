@@ -38,35 +38,35 @@ const (
 // ownership to the requested uid/gid.  If the directory already exists, this
 // function will still change ownership to the requested uid/gid pair.
 // Deprecated: Use MkdirAllAndChown
-func MkdirAllAs(path string, mode os.FileMode, identity Identity) error {
-	return mkdirAs(path, mode, identity, true, true)
+func MkdirAllAs(path string, mode os.FileMode, ownerUID, ownerGID int) error {
+	return mkdirAs(path, mode, ownerUID, ownerGID, true, true)
 }
 
 // MkdirAs creates a directory and then modifies ownership to the requested uid/gid.
 // If the directory already exists, this function still changes ownership
 // Deprecated: Use MkdirAndChown with a IDPair
-func MkdirAs(path string, mode os.FileMode, identity Identity) error {
-	return mkdirAs(path, mode, identity, false, true)
+func MkdirAs(path string, mode os.FileMode, ownerUID, ownerGID int) error {
+	return mkdirAs(path, mode, ownerUID, ownerGID, false, true)
 }
 
 // MkdirAllAndChown creates a directory (include any along the path) and then modifies
 // ownership to the requested uid/gid.  If the directory already exists, this
 // function will still change ownership to the requested uid/gid pair.
-func MkdirAllAndChown(path string, mode os.FileMode, identity Identity) error {
-	return mkdirAs(path, mode, identity, true, true)
+func MkdirAllAndChown(path string, mode os.FileMode, ids IDPair) error {
+	return mkdirAs(path, mode, ids.UID, ids.GID, true, true)
 }
 
 // MkdirAndChown creates a directory and then modifies ownership to the requested uid/gid.
 // If the directory already exists, this function still changes ownership
-func MkdirAndChown(path string, mode os.FileMode, identity Identity) error {
-	return mkdirAs(path, mode, identity, false, true)
+func MkdirAndChown(path string, mode os.FileMode, ids IDPair) error {
+	return mkdirAs(path, mode, ids.UID, ids.GID, false, true)
 }
 
 // MkdirAllAndChownNew creates a directory (include any along the path) and then modifies
 // ownership ONLY of newly created directories to the requested uid/gid. If the
 // directories along the path exist, no change of ownership will be performed
-func MkdirAllAndChownNew(path string, mode os.FileMode, identity Identity) error {
-	return mkdirAs(path, mode, identity, true, false)
+func MkdirAllAndChownNew(path string, mode os.FileMode, ids IDPair) error {
+	return mkdirAs(path, mode, ids.UID, ids.GID, true, false)
 }
 
 // GetRootUIDGID retrieves the remapped root uid/gid pair from the set of maps.
@@ -121,36 +121,10 @@ type IDPair struct {
 	GID int
 }
 
-type IdentityType int
-
-const (
-	TypeIDPair IdentityType = iota
-	TypeIDSID
-)
-
-type IdentityMappingType int
-
-const (
-	TypeMapping IdentityMappingType = iota
-	TypeIdentity
-)
-
-type Identity struct {
-	IdType IdentityType
-	IdPair IDPair
-	IdSid  string
-}
-
 // IDMappings contains a mappings of UIDs and GIDs
 type IDMappings struct {
 	uids []IDMap
 	gids []IDMap
-}
-
-type IdentityMapping struct {
-	MappingType IdentityMappingType
-	IdMappings  IDMappings
-	Id          Identity
 }
 
 // NewIDMappings takes a requested user and group name and

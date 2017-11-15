@@ -48,7 +48,7 @@ type StoreOptions struct {
 	MetadataStorePathTemplate string
 	GraphDriver               string
 	GraphDriverOptions        []string
-	IdMapping                 *idtools.IdentityMapping
+	IDMappings                *idtools.IDMappings
 	PluginGetter              plugingetter.PluginGetter
 	ExperimentalEnabled       bool
 	OS                        string
@@ -59,8 +59,8 @@ func NewStoreFromOptions(options StoreOptions) (Store, error) {
 	driver, err := graphdriver.New(options.GraphDriver, options.PluginGetter, graphdriver.Options{
 		Root:                options.StorePath,
 		DriverOptions:       options.GraphDriverOptions,
-		UIDMaps:             options.IdMapping.IdMappings.UIDs(),
-		GIDMaps:             options.IdMapping.IdMappings.GIDs(),
+		UIDMaps:             options.IDMappings.UIDs(),
+		GIDMaps:             options.IDMappings.GIDs(),
 		ExperimentalEnabled: options.ExperimentalEnabled,
 	})
 	if err != nil {

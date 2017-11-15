@@ -9,7 +9,7 @@ import (
 func (daemon *Daemon) defaultTarCopyOptions(noOverwriteDirNonDir bool) *archive.TarOptions {
 	return &archive.TarOptions{
 		NoOverwriteDirNonDir: noOverwriteDirNonDir,
-		UIDMaps:              daemon.idMapping.IdMappings.UIDs(),
-		GIDMaps:              daemon.idMapping.IdMappings.GIDs(),
+		UIDMaps:              daemon.idMappings.UIDs(),
+		GIDMaps:              daemon.idMappings.GIDs(),
 	}
 }

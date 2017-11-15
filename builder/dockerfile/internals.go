@@ -37,7 +37,7 @@ type Archiver interface {
 	UntarPath(src, dst string) error
 	CopyWithTar(src, dst string) error
 	CopyFileWithTar(src, dst string) error
-	IdentityMapping() *idtools.IdentityMapping
+	IDMappings() *idtools.IDMappings
 }
 
 // The builder will use the following interfaces if the container fs implements
@@ -68,11 +68,11 @@ func tarFunc(i interface{}) containerfs.TarFunc {
 func (b *Builder) getArchiver(src, dst containerfs.Driver) Archiver {
 	t, u := tarFunc(src), untarFunc(dst)
 	return &containerfs.Archiver{
-		SrcDriver: src,
-		DstDriver: dst,
-		Tar:       t,
-		Untar:     u,
-		IdMapping: b.idMapping,
+		SrcDriver:     src,
+		DstDriver:     dst,
+		Tar:           t,
+		Untar:         u,
+		IDMappingsVar: b.idMappings,
 	}
 }
 
@@ -192,23 +192,14 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 		return err
 	}
 
-	identity := idtools.Identity{IdType: idtools.TypeIDPair, IdPair: b.idMapping.IdMappings.RootPair()}
+	chownPair := b.idMappings.RootPair()
 	// if a chown was requested, perform the steps to get the uid, gid
 	// translated (if necessary because of user namespaces), and replace
 	// the root pair with the chown pair for copy operations
 	if inst.chownStr != "" {
-		identity, err = parseChownFlag(b.options.Platform, inst.chownStr, destInfo.root.Path(), b.idMapping)
+		chownPair, err = parseChownFlag(inst.chownStr, destInfo.root.Path(), b.idMappings)
 		if err != nil {
-			if b.options.Platform != "windows" {
-				return errors.Wrapf(err, "unable to convert uid/gid chown string to host mapping")
-			} else {
-				return errors.Wrapf(err, "unable to map user account name to host SID")
-			}
-		}
-
-		if identity.IdType == idtools.TypeIDSID {
-			b.idMapping.MappingType = idtools.TypeIdentity
-			b.idMapping.Id = identity
+			return errors.Wrapf(err, "unable to convert uid/gid chown string to host mapping")
 		}
 	}
 
@@ -216,7 +207,7 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 		opts := copyFileOptions{
 			decompress: inst.allowLocalDecompression,
 			archiver:   b.getArchiver(info.root, destInfo.root),
-			identity:   identity,
+			chownPair:  chownPair,
 		}
 		if err := performCopyForInfo(destInfo, info, opts); err != nil {
 			return errors.Wrapf(err, "failed to copy files")
@@ -225,57 +216,40 @@ func (b *Builder) performCopy(state *dispatchState, inst copyInstruction) error 
 	return b.exportImage(state, imageMount, runConfigWithCommentCmd)
 }
 
-func parseChownFlag(platform string, chown, ctrRootPath string, identityMapping *idtools.IdentityMapping) (idtools.Identity, error) {
-
-	if platform == "windows" {
-		return getAccountIdentity(chown, ctrRootPath)
-
+func parseChownFlag(chown, ctrRootPath string, idMappings *idtools.IDMappings) (idtools.IDPair, error) {
+	var userStr, grpStr string
+	parts := strings.Split(chown, ":")
+	if len(parts) > 2 {
+		return idtools.IDPair{}, errors.New("invalid chown string format: " + chown)
+	}
+	if len(parts) == 1 {
+		// if no group specified, use the user spec as group as well
+		userStr, grpStr = parts[0], parts[0]
 	} else {
+		userStr, grpStr = parts[0], parts[1]
+	}
 
-		var userStr, grpStr string
-		parts := strings.Split(chown, ":")
-		if len(parts) > 2 {
-			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.New("invalid chown string format: " + chown)
-		}
-		if len(parts) == 1 {
-			// if no group specified, use the user spec as group as well
-			userStr, grpStr = parts[0], parts[0]
-		} else {
-			userStr, grpStr = parts[0], parts[1]
-		}
-
-		passwdPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "passwd"), ctrRootPath)
-		if err != nil {
-			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't resolve /etc/passwd path in container rootfs")
-		}
-		groupPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "group"), ctrRootPath)
-		if err != nil {
-			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't resolve /etc/group path in container rootfs")
-		}
-		uid, err := lookupUser(userStr, passwdPath)
-		if err != nil {
-			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't find uid for user "+userStr)
-		}
-		gid, err := lookupGroup(grpStr, groupPath)
-		if err != nil {
-			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "can't find gid for group "+grpStr)
-		}
-
-		// convert as necessary because of user namespaces
-		idPair, err := identityMapping.IdMappings.ToHost(idtools.IDPair{UID: uid, GID: gid})
-		if err != nil {
-			return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "unable to convert uid/gid to host mapping")
-		}
-
-		identity := idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idPair}
-
-		return identity, nil
+	passwdPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "passwd"), ctrRootPath)
+	if err != nil {
+		return idtools.IDPair{}, errors.Wrapf(err, "can't resolve /etc/passwd path in container rootfs")
+	}
+	groupPath, err := symlink.FollowSymlinkInScope(filepath.Join(ctrRootPath, "etc", "group"), ctrRootPath)
+	if err != nil {
+		return idtools.IDPair{}, errors.Wrapf(err, "can't resolve /etc/group path in container rootfs")
+	}
+	uid, err := lookupUser(userStr, passwdPath)
+	if err != nil {
+		return idtools.IDPair{}, errors.Wrapf(err, "can't find uid for user "+userStr)
+	}
+	gid, err := lookupGroup(grpStr, groupPath)
+	if err != nil {
+		return idtools.IDPair{}, errors.Wrapf(err, "can't find gid for group "+grpStr)
 	}
 
 	// convert as necessary because of user namespaces
 	chownPair, err := idMappings.ToHost(idtools.IDPair{UID: uid, GID: gid})
 	if err != nil {
-		return idtools.Identity{IdType: idtools.TypeIDPair, IdPair: idtools.IDPair{}}, errors.Wrapf(err, "unable to convert uid/gid to host mapping")
+		return idtools.IDPair{}, errors.Wrapf(err, "unable to convert uid/gid to host mapping")
 	}
 	return chownPair, nil
 }

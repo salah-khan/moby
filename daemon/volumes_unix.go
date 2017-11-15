@@ -52,7 +52,7 @@ func (daemon *Daemon) setupMounts(c *container.Container) ([]container.Mount, er
 			return nil
 		}
 
-		path, err := m.Setup(c.MountLabel, daemon.idMapping.IdMappings.RootPair(), checkfunc)
+		path, err := m.Setup(c.MountLabel, daemon.idMappings.RootPair(), checkfunc)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +82,7 @@ func (daemon *Daemon) setupMounts(c *container.Container) ([]container.Mount, er
 	// if we are going to mount any of the network files from container
 	// metadata, the ownership must be set properly for potential container
 	// remapped root (user namespaces)
-	rootIDs := daemon.idMapping.IdMappings.RootPair()
+	rootIDs := daemon.idMappings.RootPair()
 	for _, mount := range netMounts {
 		// we should only modify ownership of network files within our own container
 		// metadata repository. If the user specifies a mount path external, it is
