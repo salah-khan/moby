@@ -32,7 +32,7 @@ func MkdirAllWithACL(path string, perm os.FileMode, sddl string) error {
 
 // MkdirAll implementation that is volume path aware for Windows.
 func MkdirAll(path string, _ os.FileMode, sddl string) error {
-	return mkdirall(path, false, sddl)
+	return mkdirall(path, sddl != "", sddl)
 }
 
 // mkdirall is a custom version of os.MkdirAll modified for use on Windows
