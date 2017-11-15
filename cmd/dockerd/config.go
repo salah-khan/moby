@@ -27,6 +27,8 @@ func installCommonConfigFlags(conf *config.Config, flags *pflag.FlagSet) {
 	flags.Var(opts.NewNamedListOptsRef("exec-opts", &conf.ExecOptions, nil), "exec-opt", "Runtime execution options")
 	flags.StringVarP(&conf.Pidfile, "pidfile", "p", defaultPidFile, "Path to use for daemon PID file")
 	flags.StringVarP(&conf.Root, "graph", "g", defaultDataRoot, "Root of the Docker runtime")
+	flags.StringVar(&conf.ExecRoot, "exec-root", defaultExecRoot, "Root directory for execution state files")
+	flags.StringVar(&conf.ContainerdAddr, "containerd", "", "containerd grpc address")
 
 	// "--graph" is "soft-deprecated" in favor of "data-root". This flag was added
 	// before Docker 1.0, so won't be removed, only hidden, to discourage its usage.
@@ -63,7 +65,8 @@ func installCommonConfigFlags(conf *config.Config, flags *pflag.FlagSet) {
 
 	flags.StringVar(&conf.MetricsAddress, "metrics-addr", "", "Set default address and port to serve the metrics api on")
 
-	flags.StringVar(&conf.NodeGenericResources, "node-generic-resources", "", "user defined resources (e.g. fpga=2;gpu={UUID1,UUID2,UUID3})")
+	flags.Var(opts.NewListOptsRef(&conf.NodeGenericResources, opts.ValidateSingleGenericResource), "node-generic-resource", "Advertise user-defined resource")
+
 	flags.IntVar(&conf.NetworkControlPlaneMTU, "network-control-plane-mtu", config.DefaultNetworkMtu, "Network Control plane MTU")
 
 	// "--deprecated-key-path" is to allow configuration of the key used
